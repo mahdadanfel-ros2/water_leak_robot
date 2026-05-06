@@ -1,0 +1,149 @@
+<?xml version="1.0"?>
+<robot name="aqua_finder" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ============================================================ -->
+  <!-- Parameters -->
+  <!-- ============================================================ -->
+  <xacro:property name="robot_mass"      value="25.0"/>
+  <xacro:property name="chassis_length"  value="0.55"/>
+  <xacro:property name="chassis_width"   value="0.40"/>
+  <xacro:property name="chassis_height"  value="0.20"/>
+  <xacro:property name="ground_clearance" value="0.05"/>
+
+  <xacro:property name="wheel_radius"    value="0.06"/>
+  <xacro:property name="wheel_width"     value="0.04"/>
+  <xacro:property name="wheel_mass"      value="0.5"/>
+  <xacro:property name="pi"              value="3.14159265358979"/>
+
+  <!-- Sub-components -->
+  <xacro:include filename="$(find water_leak_robot)/urdf/chassis.xacro"/>
+  <xacro:include filename="$(find water_leak_robot)/urdf/wheels.xacro"/>
+  <xacro:include filename="$(find water_leak_robot)/urdf/sensors.xacro"/>
+
+  <!-- ============================================================ -->
+  <!-- Base footprint -->
+  <!-- ============================================================ -->
+  <link name="base_footprint"/>
+
+  <joint name="base_footprint_joint" type="fixed">
+    <origin xyz="0 0 ${ground_clearance + wheel_radius}" rpy="0 0 0"/>
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+  </joint>
+
+  <!-- ============================================================ -->
+  <!-- Chassis -->
+  <!-- ============================================================ -->
+  <xacro:chassis
+    mass="${robot_mass - 4*wheel_mass}"
+    length="${chassis_length}"
+    width="${chassis_width}"
+    height="${chassis_height}"/>
+
+  <!-- ============================================================ -->
+  <!-- 4 Wheels (differential drive) -->
+  <!-- ============================================================ -->
+  <xacro:wheel name="front_left"
+    parent="base_link"
+    x="${chassis_length/2 - 0.08}"
+    y="${chassis_width/2 + wheel_width/2}"
+    z="0" mimic="false"/>
+
+  <xacro:wheel name="front_right"
+    parent="base_link"
+    x="${chassis_length/2 - 0.08}"
+    y="-${chassis_width/2 + wheel_width/2}"
+    z="0" mimic="false"/>
+
+  <xacro:wheel name="rear_left"
+    parent="base_link"
+    x="-${chassis_length/2 - 0.08}"
+    y="${chassis_width/2 + wheel_width/2}"
+    z="0" mimic="false"/>
+
+  <xacro:wheel name="rear_right"
+    parent="base_link"
+    x="-${chassis_length/2 - 0.08}"
+    y="-${chassis_width/2 + wheel_width/2}"
+    z="0" mimic="false"/>
+
+  <!-- ============================================================ -->
+  <!-- Sensors -->
+  <!-- ============================================================ -->
+  <!-- Front camera -->
+  <xacro:camera_sensor parent="base_link"
+    x="${chassis_length/2 + 0.02}" y="0" z="${chassis_height/2}"/>
+
+  <!-- 2D LiDAR for obstacle avoidance and mapping -->
+  <xacro:lidar_2d_sensor parent="base_link"
+    x="0" y="0" z="${chassis_height/2 + 0.05}"/>
+
+  <!-- IMU -->
+  <xacro:imu_sensor parent="base_link" x="0" y="0" z="0"/>
+
+  <!-- Humidity sensor array (bottom - facing floor) -->
+  <xacro:humidity_sensor name="humidity_front" parent="base_link"
+    x="${chassis_length/2 - 0.05}" y="0" z="-${chassis_height/2 - 0.01}"/>
+
+  <xacro:humidity_sensor name="humidity_rear" parent="base_link"
+    x="-${chassis_length/2 - 0.05}" y="0" z="-${chassis_height/2 - 0.01}"/>
+
+  <xacro:humidity_sensor name="humidity_left" parent="base_link"
+    x="0" y="${chassis_width/2 - 0.05}" z="-${chassis_height/2 - 0.01}"/>
+
+  <xacro:humidity_sensor name="humidity_right" parent="base_link"
+    x="0" y="-${chassis_width/2 - 0.05}" z="-${chassis_height/2 - 0.01}"/>
+
+  <!-- Water contact sensor strip (belly of robot) -->
+  <xacro:water_contact_sensor parent="base_link"
+    x="0" y="0" z="-${chassis_height/2}"/>
+
+  <!-- ============================================================ -->
+  <!-- Gazebo ros2_control plugin -->
+  <!-- ============================================================ -->
+  <gazebo>
+    <plugin filename="libgazebo_ros2_control.so" name="gazebo_ros2_control">
+      <parameters>$(find water_leak_robot)/config/controllers.yaml</parameters>
+    </plugin>
+  </gazebo>
+
+  <!-- ros2_control hardware interface -->
+  <ros2_control name="GazeboSystem" type="system">
+    <hardware>
+      <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+    </hardware>
+    <joint name="front_left_wheel_joint">
+      <command_interface name="velocity">
+        <param name="min">-10</param>
+        <param name="max">10</param>
+      </command_interface>
+      <state_interface name="velocity"/>
+      <state_interface name="position"/>
+    </joint>
+    <joint name="front_right_wheel_joint">
+      <command_interface name="velocity">
+        <param name="min">-10</param>
+        <param name="max">10</param>
+      </command_interface>
+      <state_interface name="velocity"/>
+      <state_interface name="position"/>
+    </joint>
+    <joint name="rear_left_wheel_joint">
+      <command_interface name="velocity">
+        <param name="min">-10</param>
+        <param name="max">10</param>
+      </command_interface>
+      <state_interface name="velocity"/>
+      <state_interface name="position"/>
+    </joint>
+    <joint name="rear_right_wheel_joint">
+      <command_interface name="velocity">
+        <param name="min">-10</param>
+        <param name="max">10</param>
+      </command_interface>
+      <state_interface name="velocity"/>
+      <state_interface name="position"/>
+    </joint>
+  </ros2_control>
+
+</robot>
